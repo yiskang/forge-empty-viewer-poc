@@ -17,7 +17,7 @@
           margin: 0;
           background-color: #F0F8FF;
       }
-      
+
       #EmptyView {
           position: absolute;
           top: 5px;
@@ -87,15 +87,22 @@
 
     };
 
+    let viewer = null;
     Autodesk.Viewing.Initializer( options, function() {
-        viewerApp = new Autodesk.Viewing.ViewingApplication( 'MyViewerDiv' );
-        viewerApp.registerViewer( viewerApp.k3D, Autodesk.Viewing.Private.GuiViewer3D );
+        const viewerDiv = document.getElementById( 'MyViewerDiv' );
+        viewer = new Autodesk.Viewing.Private.GuiViewer3D( viewerDiv );
+        viewer.start();
 
         loadEmptyView();
     });
 
     function loadModel( bubble ) {
-      viewerApp.loadDocument( bubble.urn, onDocumentLoadSuccess, onDocumentLoadFailure );
+      if( viewer.model ) {
+        viewer.tearDown();
+        viewer.setUp( viewer.config );
+      }
+
+      Autodesk.Viewing.Document.load( bubble.urn, onDocumentLoadSuccess, onDocumentLoadFailure );
     }
 
     function loadEmptyView() {
@@ -111,26 +118,35 @@
       // We could still make use of Document.getSubItemsWithProperties()
       // However, when using a ViewingApplication, we have access to the **bubble** attribute,
       // which references the root node of a graph that wraps each object from the Manifest JSON.
-      const viewables = viewerApp.bubble.search( { 'type':'geometry', 'role': '3d' } );
+
+      // A document contains references to 3D and 2D viewables.
+      const viewables = Autodesk.Viewing.Document.getSubItemsWithProperties(
+        doc.getRootItem(),
+        { 'type':'geometry', 'role': '3d' },
+        true
+      );
+
       if (viewables.length === 0)
           return console.error( 'Document contains no viewables.' );
 
-      // Choose any of the avialble viewables
-      viewerApp.selectItem( viewables[0].data, onItemLoadSuccess, onItemLoadFail );
+      const initialViewable = viewables[0];
+      const svfUrl = doc.getViewablePath( initialViewable );
 
-      const viewer = viewerApp.getViewer();
       viewer.addEventListener(
           Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
           onGeometryLoaded
       );
+
+      // Choose any of the available viewables
+      viewer.loadModel( svfUrl, null, onItemLoadSuccess, onItemLoadFail );
     }
 
     function onDocumentLoadFailure( viewerErrorCode ) {
       console.error( 'onDocumentLoadFailure() - errorCode:' + viewerErrorCode );
     }
 
-    function onItemLoadSuccess( viewer, item ) {
-      console.log( 'onItemLoadSuccess()!', viewer, item );
+    function onItemLoadSuccess( model ) {
+      console.log( 'onItemLoadSuccess()!', model );
     }
 
     function onItemLoadFail( errorMsg ) {
@@ -140,7 +156,6 @@
     function onGeometryLoaded( model ) {
       console.log( 'onGeometryLoaded()!', model );
 
-      const viewer = viewerApp.getCurrentViewer();
       viewer.removeEventListener(
           Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
           onGeometryLoaded
