@@ -9,7 +9,7 @@
 
 # Description
 
-This sample is demonstrating a workaround how to initialize a viewer in empty mode mode discussed in a StackOverflow [thread](https://stackoverflow.com/a/46540613/7745569).
+This sample is demonstrating a workaround about how to initialize a viewer in empty model mode discussed in a StackOverflow [thread](https://stackoverflow.com/a/46540613/7745569).
 
 # Setup
 
